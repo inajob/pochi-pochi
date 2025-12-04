@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Dot Game</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #score-display {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #007bff;
+            font-weight: bold;
+        }
+        #game-container {
+            border: 2px solid #333;
+            padding: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(16, 20px);
+            grid-template-rows: repeat(16, 20px);
+            border: 1px solid #ddd;
+            width: 320px;
+            height: 320px;
+        }
+        .pixel {
+            width: 20px;
+            height: 20px;
+        }
+        .color-0 { background-color: #000000; } /* Black */
+        .color-1 { background-color: #FF0000; } /* Red */
+        .color-2 { background-color: #00FF00; } /* Green */
+        .color-3 { background-color: #FFFF00; } /* Yellow */
+        .color-4 { background-color: #0000FF; } /* Blue */
+        .color-5 { background-color: #FF00FF; } /* Magenta */
+        .color-6 { background-color: #00FFFF; } /* Cyan */
+        .color-7 { background-color: #FFFFFF; border: 1px solid #eee; } /* White */
+
+        #controls {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Dot Game (WASM)</h1>
+    <div id="score-display">Score: 0</div>
+    <div id="game-container">
+        <div id="grid-container"></div>
+    </div>
+    <div id="controls">
+        <button id="jump-button">Jump (Space)</button>
+    </div>
+
+    <script src="main.js"></script>
+    <!-- EMSCRIPTEN_START -->
+    <script src="game.js"></script>
+    <!-- EMSCRIPTEN_END -->
+</body>
+</html>
