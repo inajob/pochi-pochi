@@ -69,5 +69,5 @@ void loop() {
   matrix.show(); // Update the display with the new data
 
   // 4. Delay to control frame rate
-  delay(70); // Approximately 14 FPS
+  delay(50); // Approximately 14 FPS
 }

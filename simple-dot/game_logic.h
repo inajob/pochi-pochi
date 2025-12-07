@@ -12,13 +12,19 @@ struct Obstacle {
     float x;
     int gap_y;
     int gap_size;
-    bool scored; // ★ 追加
+    bool scored;
+};
+
+enum GamePhase {
+    PHASE_TITLE,
+    PHASE_PLAYING,
+    PHASE_GAME_OVER
 };
 
 struct GameState {
     // 0: Black, 1: Red, 2: Green, 3: Yellow, 4: Blue, 5: Magenta, 6: Cyan, 7: White
     uint8_t screen[SCREEN_HEIGHT][SCREEN_WIDTH];
-    bool game_over;
+    GamePhase phase;
     int score;
 
     // Player
@@ -29,6 +35,9 @@ struct GameState {
     // Obstacles
     int frame_count;
     Obstacle obstacles[MAX_OBSTACLES];
+
+    // UI
+    float text_scroll_offset;
 };
 
 #ifdef __cplusplus
