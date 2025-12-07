@@ -41,6 +41,9 @@ struct GameState {
     GamePhase phase;
     GameSelection current_game;
     int button_down_frames;
+    bool was_button_pressed_last_frame;
+    bool long_press_action_taken;
+    bool ignore_input_until_release;
 
     // Generic state
     int score;
@@ -60,6 +63,7 @@ extern "C" {
 
 // --- Core Functions (in game_logic.cpp) ---
 void init_game(GameState& state);
+void set_initial_game(GameState& state);
 void update_game(GameState& state, bool jump_button_pressed);
 
 // --- Drawing helpers (to be used by multiple games) ---

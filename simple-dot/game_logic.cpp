@@ -85,10 +85,17 @@ void draw_score(GameState& state, int x, int y, int color) {
 
 void init_game(GameState& state) {
     state.phase = PHASE_TITLE;
-    state.current_game = GAME_JUMP;
     state.button_down_frames = 0;
     state.text_scroll_offset = SCREEN_WIDTH;
+    state.was_button_pressed_last_frame = false;
+    state.long_press_action_taken = false;
+    state.ignore_input_until_release = true; // Ignore input until first release
 }
+
+void set_initial_game(GameState& state) {
+    state.current_game = GAME_JUMP;
+}
+
 
 void update_game(GameState& state, bool jump_button_pressed) {
     clear_screen(state);
@@ -97,42 +104,55 @@ void update_game(GameState& state, bool jump_button_pressed) {
 
     switch (state.phase) {
         case PHASE_TITLE: {
-            if (jump_button_pressed) {
-                state.button_down_frames++;
+            if (state.ignore_input_until_release) {
+                // Wait for the button to be released after coming back to the title screen
+                if (!jump_button_pressed) {
+                    state.ignore_input_until_release = false;
+                }
+                // Crucially, skip all other input processing for this frame
+                // Reset counters just in case they were left in a bad state by the old game phase
+                state.button_down_frames = 0;
+                state.long_press_action_taken = false;
             } else {
-                // Button was released
-                if (state.button_down_frames > 0 && state.button_down_frames < LONG_PRESS_FRAMES) {
-                    // It was a short press, switch game
-                    state.current_game = (GameSelection)((state.current_game + 1) % NUM_GAMES);
-                }
-                state.button_down_frames = 0;
-            }
+                // Normal title screen input processing
+                if (jump_button_pressed) {
+                    state.button_down_frames++;
 
-            // Check for a long press to start the game
-            if (state.button_down_frames >= LONG_PRESS_FRAMES) {
-                switch(state.current_game) {
-                    case GAME_JUMP:
-                        init_jump_game(state); // This will set phase to PLAYING
-                        break;
-                    case GAME_CHASE:
-                        init_chase_game(state); // This will set phase to PLAYING
-                        break;
+                    // Check for a long press that hasn't been actioned yet
+                    if (state.button_down_frames >= LONG_PRESS_FRAMES && !state.long_press_action_taken) {
+                        // This is a long press, so SWITCH the game
+                        state.current_game = (GameSelection)((state.current_game + 1) % NUM_GAMES);
+                        state.long_press_action_taken = true; // Mark action as taken for this press
+                    }
+                } else { // Button was released
+                    // Check if it was a short press (released before long press action was taken)
+                    if (state.button_down_frames > 0 && !state.long_press_action_taken) {
+                         // This is a short press, so START the game
+                         switch(state.current_game) {
+                            case GAME_JUMP:
+                                init_jump_game(state);
+                                break;
+                            case GAME_CHASE:
+                                init_chase_game(state);
+                                break;
+                        }
+                    }
+                    // Reset everything on release for the next press
+                    state.button_down_frames = 0;
+                    state.long_press_action_taken = false;
                 }
-                // Reset button press counter after starting a game
-                state.button_down_frames = 0;
-                // The game's own init function handles the phase change.
-                // The switch below will then immediately start running the game logic.
             }
 
             // Draw the title for the currently selected game
-            // (unless we just started one)
-            if (state.phase == PHASE_TITLE) {
+            if (state.phase == PHASE_TITLE) { // Check phase again in case it changed to PLAYING
                  switch(state.current_game) {
                     case GAME_JUMP:
                         draw_jump_title(state);
                         break;
                     case GAME_CHASE:
                         draw_chase_title(state);
+                        break;
+                    default:
                         break;
                 }
             }
@@ -153,6 +173,8 @@ void update_game(GameState& state, bool jump_button_pressed) {
             break;
         }
     }
+
+    state.was_button_pressed_last_frame = jump_button_pressed;
 
 #ifdef __EMSCRIPTEN__
     render_screen(state);

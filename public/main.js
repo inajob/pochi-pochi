@@ -97,6 +97,7 @@ var Module = {
         // Wrap C++ functions
         init_game_wasm = Module.cwrap('init_game', null, ['number']);
         update_game_wasm = Module.cwrap('update_game', null, ['number', 'boolean']);
+        set_initial_game_wasm = Module.cwrap('set_initial_game', null, ['number']);
 
         // Allocate memory for GameState struct on WASM heap.
         // Even though we don't access it from JS, the C++ code needs it.
@@ -112,6 +113,7 @@ var Module = {
 
         // Initialize game state in WASM (which will also do the initial render)
         init_game_wasm(gameStatePtr);
+        set_initial_game_wasm(gameStatePtr); // Set initial game to JUMP
 
         console.log("Game initialized. Starting loop.");
         gameLoop(); // Start the game loop
