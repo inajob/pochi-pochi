@@ -87,6 +87,7 @@ void init_game(GameState& state) {
     state.phase = PHASE_TITLE;
     state.current_game = GAME_JUMP;
     state.button_down_frames = 0;
+    state.text_scroll_offset = SCREEN_WIDTH;
 }
 
 void update_game(GameState& state, bool jump_button_pressed) {
@@ -138,6 +139,7 @@ void update_game(GameState& state, bool jump_button_pressed) {
             break;
         }
 
+        case PHASE_COUNTDOWN:
         case PHASE_PLAYING:
         case PHASE_GAME_OVER: {
             switch(state.current_game) {

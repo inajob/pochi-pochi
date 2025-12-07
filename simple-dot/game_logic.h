@@ -12,6 +12,7 @@ struct GameState;
 // --- Core Enums ---
 enum GamePhase {
     PHASE_TITLE,
+    PHASE_COUNTDOWN,
     PHASE_PLAYING,
     PHASE_GAME_OVER
 };

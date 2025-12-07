@@ -52,13 +52,24 @@ function init() {
     }
 
     // Add event listeners
-    jumpButton.addEventListener('click', () => {
+    jumpButton.addEventListener('mousedown', () => {
         jump_button_pressed = true;
+    });
+    jumpButton.addEventListener('mouseup', () => {
+        jump_button_pressed = false;
+    });
+    jumpButton.addEventListener('mouseleave', () => { // In case the user drags the mouse away
+        jump_button_pressed = false;
     });
     document.addEventListener('keydown', (e) => {
         if (e.code === 'Space') {
             e.preventDefault(); // Prevent page scroll
             jump_button_pressed = true;
+        }
+    });
+    document.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            jump_button_pressed = false;
         }
     });
 }
@@ -70,8 +81,7 @@ function gameLoop() {
     // which in turn calls window.setPixelInGrid for each pixel.
     update_game_wasm(gameStatePtr, jump_button_pressed);
 
-    // Reset the button press flag for the next frame
-    jump_button_pressed = false;
+    // The jump_button_pressed flag is now reset by keyup/mouseup events.
 
     // 2. Request next frame
     requestAnimationFrame(gameLoop);
