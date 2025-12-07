@@ -6,8 +6,26 @@
 #define SCREEN_WIDTH 16
 #define SCREEN_HEIGHT 16
 
-#define MAX_OBSTACLES 2
+// --- Forward declaration for GameState ---
+struct GameState;
 
+// --- Core Enums ---
+enum GamePhase {
+    PHASE_TITLE,
+    PHASE_PLAYING,
+    PHASE_GAME_OVER
+};
+
+enum GameSelection {
+    GAME_JUMP,
+    GAME_CHASE
+};
+const int NUM_GAMES = 2;
+
+
+// --- Game-specific data structures ---
+// (Specific to Jump Game, but kept here for now to minimize refactoring)
+#define MAX_OBSTACLES 2
 struct Obstacle {
     float x;
     int gap_y;
@@ -15,37 +33,40 @@ struct Obstacle {
     bool scored;
 };
 
-enum GamePhase {
-    PHASE_TITLE,
-    PHASE_PLAYING,
-    PHASE_GAME_OVER
-};
-
+// --- Main Game State ---
 struct GameState {
-    // 0: Black, 1: Red, 2: Green, 3: Yellow, 4: Blue, 5: Magenta, 6: Cyan, 7: White
+    // Screen buffer & core state
     uint8_t screen[SCREEN_HEIGHT][SCREEN_WIDTH];
     GamePhase phase;
-    int score;
+    GameSelection current_game;
+    int button_down_frames;
 
-    // Player
+    // Generic state
+    int score;
+    int frame_count;
+    float text_scroll_offset;
+
+    // Jump Game specific state
     int player_x;
     float player_y;
     float player_velocity_y;
-
-    // Obstacles
-    int frame_count;
     Obstacle obstacles[MAX_OBSTACLES];
-
-    // UI
-    float text_scroll_offset;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// --- Core Functions (in game_logic.cpp) ---
 void init_game(GameState& state);
 void update_game(GameState& state, bool jump_button_pressed);
+
+// --- Drawing helpers (to be used by multiple games) ---
+void clear_screen(GameState& state);
+void draw_char(GameState& state, char c, int x, int y, int color);
+void draw_text(GameState& state, const char* text, int start_x, int start_y, int color);
+void draw_score(GameState& state, int x, int y, int color);
+
 
 #ifdef __cplusplus
 }
