@@ -80,6 +80,7 @@ void draw_score(GameState& state, int x, int y, int color) {
 
 #include "game_jump.h"
 #include "game_chase.h"
+#include "game_fill.h"
 
 // --- Public API Functions ---
 
@@ -135,6 +136,9 @@ void update_game(GameState& state, bool jump_button_pressed) {
                             case GAME_CHASE:
                                 init_chase_game(state);
                                 break;
+                            case GAME_FILL:
+                                init_fill_game(state);
+                                break;
                         }
                     }
                     // Reset everything on release for the next press
@@ -152,6 +156,9 @@ void update_game(GameState& state, bool jump_button_pressed) {
                     case GAME_CHASE:
                         draw_chase_title(state);
                         break;
+                    case GAME_FILL:
+                        draw_fill_title(state);
+                        break;
                     default:
                         break;
                 }
@@ -168,6 +175,9 @@ void update_game(GameState& state, bool jump_button_pressed) {
                     break;
                 case GAME_CHASE:
                     update_chase_game(state, jump_button_pressed);
+                    break;
+                case GAME_FILL:
+                    update_fill_game(state, jump_button_pressed);
                     break;
             }
             break;

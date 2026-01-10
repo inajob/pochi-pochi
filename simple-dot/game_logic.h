@@ -19,9 +19,10 @@ enum GamePhase {
 
 enum GameSelection {
     GAME_JUMP,
-    GAME_CHASE
+    GAME_CHASE,
+    GAME_FILL
 };
-const int NUM_GAMES = 2;
+const int NUM_GAMES = 3;
 
 
 // --- Game-specific data structures ---
@@ -55,6 +56,17 @@ struct GameState {
     float player_y;
     float player_velocity_y;
     Obstacle obstacles[MAX_OBSTACLES];
+
+    // Fill Game specific state
+    int fill_player_x;
+    int fill_player_move_timer;
+    int fill_playfield_shift_timer;
+    int fill_line_clear_timer;
+    int fill_line_clear_y;
+    bool fill_projectile_active;
+    int fill_projectile_x;
+    int fill_projectile_y;
+    uint8_t fill_playfield[SCREEN_HEIGHT][SCREEN_WIDTH];
 };
 
 #ifdef __cplusplus
