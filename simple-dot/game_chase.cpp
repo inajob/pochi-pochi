@@ -33,11 +33,11 @@ void init_chase_game(GameState& state) {
     state.score = 0;
     state.frame_count = 0;
     
-    // Use player_x to store current lane INDEX (0, 1, or 2)
-    state.player_x = 1; // Start in the middle lane
+    state.g.chase = new ChaseGameState();
+    state.g.chase->player_lane_index = 1; // Start in the middle lane
 
     for (int i = 0; i < MAX_OBSTACLES; ++i) {
-        spawn_wall(state.obstacles[i], -i * WALL_SPACING);
+        spawn_wall(state.g.chase->walls[i], -i * WALL_SPACING);
     }
 }
 
@@ -52,32 +52,32 @@ void update_chase_game(GameState& state, bool button_pressed) {
         case PHASE_PLAYING: {
             // --- Handle Input ---
             if (button_pressed && !state.was_button_pressed_last_frame) {
-                state.player_x = (state.player_x + 1) % NUM_LANES;
+                state.g.chase->player_lane_index = (state.g.chase->player_lane_index + 1) % NUM_LANES;
             }
 
             // --- Update Game State ---
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                state.obstacles[i].x += WALL_SPEED; // Move wall down
+                state.g.chase->walls[i].x += WALL_SPEED; // Move wall down
 
                 // Check for scoring
-                if (!state.obstacles[i].scored && state.obstacles[i].x > PLAYER_Y_POS) {
+                if (!state.g.chase->walls[i].scored && state.g.chase->walls[i].x > PLAYER_Y_POS) {
                     state.score++;
-                    state.obstacles[i].scored = true;
+                    state.g.chase->walls[i].scored = true;
                 }
 
                 // Respawn wall if it's off-screen
-                if (state.obstacles[i].x >= SCREEN_HEIGHT) {
-                    spawn_wall(state.obstacles[i], 0);
+                if (state.g.chase->walls[i].x >= SCREEN_HEIGHT) {
+                    spawn_wall(state.g.chase->walls[i], 0);
                 }
             }
 
             // --- Collision Detection ---
-            int player_lane_x = LANE_POS[state.player_x];
+            int player_lane_x = LANE_POS[state.g.chase->player_lane_index];
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                int wall_y = (int)state.obstacles[i].x;
+                int wall_y = (int)state.g.chase->walls[i].x;
                 if (wall_y == PLAYER_Y_POS) {
-                    int gap_lane = state.obstacles[i].gap_y;
-                    if (state.player_x != gap_lane) {
+                    int gap_lane = state.g.chase->walls[i].gap_y;
+                    if (state.g.chase->player_lane_index != gap_lane) {
                         state.phase = PHASE_GAME_OVER;
                         state.frame_count = 0; // For game over delay
                         state.text_scroll_offset = SCREEN_WIDTH;
@@ -88,9 +88,9 @@ void update_chase_game(GameState& state, bool button_pressed) {
             // --- Drawing ---
             // Draw walls
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                int wall_y = (int)state.obstacles[i].x;
+                int wall_y = (int)state.g.chase->walls[i].x;
                 if (wall_y >= 0 && wall_y < SCREEN_HEIGHT) {
-                    int gap_lane_x = LANE_POS[state.obstacles[i].gap_y];
+                    int gap_lane_x = LANE_POS[state.g.chase->walls[i].gap_y];
                     for (int x = 0; x < SCREEN_WIDTH; ++x) {
                         if (x != gap_lane_x) {
                             state.screen[wall_y][x] = CHASE_WALL_COLOR;
@@ -121,14 +121,13 @@ void update_chase_game(GameState& state, bool button_pressed) {
             draw_score(state, SCREEN_WIDTH / 2, 10, 7); // Corrected Y position
 
             if (button_pressed && !state.was_button_pressed_last_frame && state.frame_count > 30) {
+                delete state.g.chase;
+                state.g.chase = nullptr;
                 init_game(state); // Go back to main title screen
             }
             break;
         }
         default:
-            // PHASE_TITLE and PHASE_COUNTDOWN are handled by the main dispatcher,
-            // so update_chase_game should not be called in these phases.
-            // Do nothing for other unexpected phases.
             break;
     }
 }

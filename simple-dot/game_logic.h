@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+// Forward declarations for game-specific state structs
+struct JumpGameState;
+struct ChaseGameState;
+struct FillGameState;
+
+
 #define SCREEN_WIDTH 16
 #define SCREEN_HEIGHT 16
 
@@ -25,8 +31,7 @@ enum GameSelection {
 const int NUM_GAMES = 3;
 
 
-// --- Game-specific data structures ---
-// (Specific to Jump Game, but kept here for now to minimize refactoring)
+// --- Shared data structures ---
 #define MAX_OBSTACLES 2
 struct Obstacle {
     float x;
@@ -51,22 +56,12 @@ struct GameState {
     int frame_count;
     float text_scroll_offset;
 
-    // Jump Game specific state
-    int player_x;
-    float player_y;
-    float player_velocity_y;
-    Obstacle obstacles[MAX_OBSTACLES];
-
-    // Fill Game specific state
-    int fill_player_x;
-    int fill_player_move_timer;
-    int fill_playfield_shift_timer;
-    int fill_line_clear_timer;
-    int fill_line_clear_y;
-    bool fill_projectile_active;
-    int fill_projectile_x;
-    int fill_projectile_y;
-    uint8_t fill_playfield[SCREEN_HEIGHT][SCREEN_WIDTH];
+    // Union of pointers to game-specific states
+    union {
+        JumpGameState* jump;
+        ChaseGameState* chase;
+        FillGameState* fill;
+    } g; // g for game
 };
 
 #ifdef __cplusplus

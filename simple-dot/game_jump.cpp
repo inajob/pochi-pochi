@@ -29,29 +29,27 @@ const int FIXED_GAP_SIZE = 7;
 const int FIXED_GAP_Y = 9;
 
 
-// Logic for the jump game will be moved here.
+// --- Game-specific Helper Functions ---
 
 void draw_player(GameState& state) {
-    int y = (int)state.player_y;
-    if (state.player_x >= 0 && state.player_x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
-        state.screen[y][state.player_x] = PLAYER_COLOR;
+    int y = (int)state.g.jump->player_y;
+    if (state.g.jump->player_x >= 0 && state.g.jump->player_x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
+        state.screen[y][state.g.jump->player_x] = PLAYER_COLOR;
     }
 }
 
 void draw_obstacles(GameState& state) {
     for (int i = 0; i < MAX_OBSTACLES; ++i) {
-        int obs_x = (int)state.obstacles[i].x;
+        int obs_x = (int)state.g.jump->obstacles[i].x;
         for (int w = 0; w < OBSTACLE_WIDTH; ++w) {
             if (obs_x + w < 0 || obs_x + w >= SCREEN_WIDTH) continue;
             for (int y = 0; y < SCREEN_HEIGHT; ++y) {
-                if (y > state.obstacles[i].gap_y - state.obstacles[i].gap_size / 2 && y < state.obstacles[i].gap_y + state.obstacles[i].gap_size / 2) continue;
+                if (y > state.g.jump->obstacles[i].gap_y - state.g.jump->obstacles[i].gap_size / 2 && y < state.g.jump->obstacles[i].gap_y + state.g.jump->obstacles[i].gap_size / 2) continue;
                 state.screen[y][obs_x + w] = OBSTACLE_COLOR;
             }
         }
     }
 }
-
-// --- Game Logic Helper Functions ---
 
 void spawn_obstacle(Obstacle& obstacle, float x_pos) {
     obstacle.x = x_pos;
@@ -62,32 +60,34 @@ void spawn_obstacle(Obstacle& obstacle, float x_pos) {
 
 void update_obstacles(GameState& state) {
     for (int i = 0; i < MAX_OBSTACLES; ++i) {
-        state.obstacles[i].x -= OBSTACLE_SPEED;
-        if (state.obstacles[i].x + OBSTACLE_WIDTH < 0) {
+        state.g.jump->obstacles[i].x -= OBSTACLE_SPEED;
+        if (state.g.jump->obstacles[i].x + OBSTACLE_WIDTH < 0) {
             float max_x = 0;
             for (int j = 0; j < MAX_OBSTACLES; ++j) {
-                if (state.obstacles[j].x > max_x) max_x = state.obstacles[j].x;
+                if (state.g.jump->obstacles[j].x > max_x) max_x = state.g.jump->obstacles[j].x;
             }
             int random_spacing = MIN_OBSTACLE_SPACING + (rand() % (MAX_OBSTACLE_SPACING - MIN_OBSTACLE_SPACING + 1));
-            spawn_obstacle(state.obstacles[i], max_x + random_spacing);
+            spawn_obstacle(state.g.jump->obstacles[i], max_x + random_spacing);
         }
     }
 }
 
 bool check_collision(GameState& state) {
-    int player_y = (int)state.player_y;
+    int player_y = (int)state.g.jump->player_y;
     if (player_y >= SCREEN_HEIGHT || player_y < 0) return true;
     for (int i = 0; i < MAX_OBSTACLES; ++i) {
-        int obs_x_start = (int)state.obstacles[i].x;
+        int obs_x_start = (int)state.g.jump->obstacles[i].x;
         int obs_x_end = obs_x_start + OBSTACLE_WIDTH - 1;
-        if (state.player_x >= obs_x_start && state.player_x <= obs_x_end) {
-            int gap_y_start = state.obstacles[i].gap_y - state.obstacles[i].gap_size / 2;
-            int gap_y_end = state.obstacles[i].gap_y + state.obstacles[i].gap_size / 2 - 1;
+        if (state.g.jump->player_x >= obs_x_start && state.g.jump->player_x <= obs_x_end) {
+            int gap_y_start = state.g.jump->obstacles[i].gap_y - state.g.jump->obstacles[i].gap_size / 2;
+            int gap_y_end = state.g.jump->obstacles[i].gap_y + state.g.jump->obstacles[i].gap_size / 2 - 1;
             if (player_y < gap_y_start || player_y > gap_y_end) return true;
         }
     }
     return false;
 }
+
+// --- Public API Functions ---
 
 void draw_jump_title(GameState& state) {
     const char* title_text = "JUMP";
@@ -105,11 +105,13 @@ void init_jump_game(GameState& state) {
     state.phase = PHASE_COUNTDOWN;
     state.score = 0;
     state.frame_count = 0;
-    state.player_x = 3;
-    state.player_y = SCREEN_HEIGHT / 2.0f;
-    state.player_velocity_y = 0;
+    
+    state.g.jump = new JumpGameState();
+    state.g.jump->player_x = 3;
+    state.g.jump->player_y = SCREEN_HEIGHT / 2.0f;
+    state.g.jump->player_velocity_y = 0;
     for (int i = 0; i < MAX_OBSTACLES; ++i) {
-        spawn_obstacle(state.obstacles[i], SCREEN_WIDTH + i * (MIN_OBSTACLE_SPACING + 2));
+        spawn_obstacle(state.g.jump->obstacles[i], SCREEN_WIDTH + i * (MIN_OBSTACLE_SPACING + 2));
     }
 #ifdef __EMSCRIPTEN__
     js_update_score(state.score);
@@ -117,46 +119,40 @@ void init_jump_game(GameState& state) {
 }
 
 void update_jump_game(GameState& state, bool jump_button_pressed) {
-    // This function is called when state.phase is PLAYING or GAME_OVER
-    // and the current_game is GAME_JUMP.
     switch (state.phase) {
         case PHASE_COUNTDOWN: {
             state.frame_count++;
             
-            // Draw the player at their starting position
             draw_player(state);
             
-            // Display countdown number
             const int frames_per_number = 60;
             int number = 3 - (state.frame_count / frames_per_number);
             
             if (number > 0) {
-                // Draw the number character (e.g., '3', '2', '1')
-                // The character '0' is at index 0 in our font
                 draw_char(state, (char)('0' + number), 6, 5, 7); 
             }
 
             if (state.frame_count >= frames_per_number * 3) {
                 state.phase = PHASE_PLAYING;
-                state.frame_count = 0; // Reset for game logic
+                state.frame_count = 0;
             }
             break;
         }
 
         case PHASE_PLAYING:
             state.frame_count++;
-            if (jump_button_pressed && state.player_y >= SCREEN_HEIGHT - 2) state.player_velocity_y = JUMP_FORCE;
-            state.player_velocity_y += GRAVITY;
-            state.player_y += state.player_velocity_y;
-            if (state.player_y >= SCREEN_HEIGHT - 1) { state.player_y = SCREEN_HEIGHT - 1; state.player_velocity_y = 0; }
-            if (state.player_y < 0) { state.player_y = 0; state.player_velocity_y = 0; }
+            if (jump_button_pressed && state.g.jump->player_y >= SCREEN_HEIGHT - 2) state.g.jump->player_velocity_y = JUMP_FORCE;
+            state.g.jump->player_velocity_y += GRAVITY;
+            state.g.jump->player_y += state.g.jump->player_velocity_y;
+            if (state.g.jump->player_y >= SCREEN_HEIGHT - 1) { state.g.jump->player_y = SCREEN_HEIGHT - 1; state.g.jump->player_velocity_y = 0; }
+            if (state.g.jump->player_y < 0) { state.g.jump->player_y = 0; state.g.jump->player_velocity_y = 0; }
             
             update_obstacles(state);
 
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                if (!state.obstacles[i].scored && (state.obstacles[i].x + OBSTACLE_WIDTH < state.player_x)) {
+                if (!state.g.jump->obstacles[i].scored && (state.g.jump->obstacles[i].x + OBSTACLE_WIDTH < state.g.jump->player_x)) {
                     state.score++;
-                    state.obstacles[i].scored = true;
+                    state.g.jump->obstacles[i].scored = true;
 #ifdef __EMSCRIPTEN__
                     js_update_score(state.score);
 #endif
@@ -194,13 +190,13 @@ void update_jump_game(GameState& state, bool jump_button_pressed) {
 
             const int GAMEOVER_INPUT_DELAY_FRAMES = 30;
             if (jump_button_pressed && !state.was_button_pressed_last_frame && state.frame_count > GAMEOVER_INPUT_DELAY_FRAMES) {
+                delete state.g.jump;
+                state.g.jump = nullptr;
                 init_game(state);
             }
             break;
         }
         default:
-            // PHASE_TITLE is handled by the main dispatcher, so update_jump_game should not be called in this phase.
-            // Do nothing for other unexpected phases.
             break;
     }
 }
