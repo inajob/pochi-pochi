@@ -30,6 +30,13 @@ enum GameSelection {
 };
 const int NUM_GAMES = 3;
 
+// --- Game VTable (Function Pointer Table) ---
+struct GameVTable {
+    void (*init)(GameState&);
+    void (*update)(GameState&, bool);
+    void (*draw_title)(GameState&);
+};
+
 
 // --- Shared data structures ---
 #define MAX_OBSTACLES 2

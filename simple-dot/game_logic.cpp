@@ -82,6 +82,14 @@ void draw_score(GameState& state, int x, int y, int color) {
 #include "game_chase.h"
 #include "game_fill.h"
 
+// --- Game Function Pointer Table ---
+GameVTable game_vtable[NUM_GAMES] = {
+    { .init = init_jump_game, .update = update_jump_game, .draw_title = draw_jump_title }, // GAME_JUMP
+    { .init = init_chase_game, .update = update_chase_game, .draw_title = draw_chase_title }, // GAME_CHASE
+    { .init = init_fill_game, .update = update_fill_game, .draw_title = draw_fill_title } // GAME_FILL
+};
+
+
 // --- Public API Functions ---
 
 void init_game(GameState& state) {
@@ -129,17 +137,7 @@ void update_game(GameState& state, bool jump_button_pressed) {
                     // Check if it was a short press (released before long press action was taken)
                     if (state.button_down_frames > 0 && !state.long_press_action_taken) {
                          // This is a short press, so START the game
-                         switch(state.current_game) {
-                            case GAME_JUMP:
-                                init_jump_game(state);
-                                break;
-                            case GAME_CHASE:
-                                init_chase_game(state);
-                                break;
-                            case GAME_FILL:
-                                init_fill_game(state);
-                                break;
-                        }
+                         game_vtable[state.current_game].init(state);
                     }
                     // Reset everything on release for the next press
                     state.button_down_frames = 0;
@@ -149,19 +147,7 @@ void update_game(GameState& state, bool jump_button_pressed) {
 
             // Draw the title for the currently selected game
             if (state.phase == PHASE_TITLE) { // Check phase again in case it changed to PLAYING
-                 switch(state.current_game) {
-                    case GAME_JUMP:
-                        draw_jump_title(state);
-                        break;
-                    case GAME_CHASE:
-                        draw_chase_title(state);
-                        break;
-                    case GAME_FILL:
-                        draw_fill_title(state);
-                        break;
-                    default:
-                        break;
-                }
+                 game_vtable[state.current_game].draw_title(state);
             }
             break;
         }
@@ -169,17 +155,7 @@ void update_game(GameState& state, bool jump_button_pressed) {
         case PHASE_COUNTDOWN:
         case PHASE_PLAYING:
         case PHASE_GAME_OVER: {
-            switch(state.current_game) {
-                case GAME_JUMP:
-                    update_jump_game(state, jump_button_pressed);
-                    break;
-                case GAME_CHASE:
-                    update_chase_game(state, jump_button_pressed);
-                    break;
-                case GAME_FILL:
-                    update_fill_game(state, jump_button_pressed);
-                    break;
-            }
+            game_vtable[state.current_game].update(state, jump_button_pressed);
             break;
         }
     }
