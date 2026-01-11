@@ -32,6 +32,11 @@ private:
     int m_projectile_y;
     uint8_t m_playfield[SCREEN_HEIGHT][SCREEN_WIDTH];
     int m_frame_counter;
+    int m_current_playfield_shift_speed;
+    int m_current_player_move_speed;
+    int m_num_gaps_per_row;
+    int m_next_difficulty_score_threshold;
+    int m_difficulty_level;
 
     // Private helper methods
     void generate_new_top_row();

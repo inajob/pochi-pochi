@@ -9,8 +9,10 @@ const int PROJECTILE_COLOR = 4; // Blue
 const int STATIC_BLOCK_COLOR = 7; // White
 const int LINE_CLEAR_EFFECT_COLOR = 3; // Yellow
 
-const int PLAYER_MOVE_SPEED = 20;
-const int PLAYFIELD_SHIFT_SPEED = 400;
+const int PLAYER_MOVE_SPEED_LEVELS[] = {20, 18, 16, 10};
+const int PLAYFIELD_SHIFT_SPEED_LEVELS[] = {400, 300, 200, 150};
+const int NUM_GAPS_PER_ROW_LEVELS[] = {1, 2, 3, 4}; // More gaps = harder (user's definition)
+const int SCORE_THRESHOLDS[] = {5, 15, 30}; // Score needed to reach Level 1, 2, 3
 
 
 // --- Constructor ---
@@ -25,10 +27,17 @@ FillGame::FillGame(GameState& state) {
 
     m_player_x = SCREEN_WIDTH / 2;
     m_player_move_timer = 0;
-    m_playfield_shift_timer = PLAYFIELD_SHIFT_SPEED;
+    m_playfield_shift_timer = PLAYFIELD_SHIFT_SPEED_LEVELS[0]; // Initialize with level 0 speed
     m_line_clear_timer = 0;
     m_line_clear_y = -1;
     m_projectile_active = false;
+
+    // Initialize difficulty parameters
+    m_difficulty_level = 0;
+    m_current_playfield_shift_speed = PLAYFIELD_SHIFT_SPEED_LEVELS[0];
+    m_current_player_move_speed = PLAYER_MOVE_SPEED_LEVELS[0];
+    m_num_gaps_per_row = NUM_GAPS_PER_ROW_LEVELS[0];
+    m_next_difficulty_score_threshold = SCORE_THRESHOLDS[0];
 }
 
 // --- Public Methods ---
@@ -71,14 +80,29 @@ bool FillGame::update(GameState& state, bool button_pressed) {
                 }
             } else {
                 // --- Normal game logic ---
+
+                // --- Difficulty Scaling ---
+                if (m_difficulty_level < 3 && state.score >= m_next_difficulty_score_threshold) {
+                    m_difficulty_level++;
+                    m_current_playfield_shift_speed = PLAYFIELD_SHIFT_SPEED_LEVELS[m_difficulty_level];
+                    m_current_player_move_speed = PLAYER_MOVE_SPEED_LEVELS[m_difficulty_level];
+                    m_num_gaps_per_row = NUM_GAPS_PER_ROW_LEVELS[m_difficulty_level];
+                    if (m_difficulty_level < 3) { // Ensure we don't access out of bounds for SCORE_THRESHOLDS
+                        m_next_difficulty_score_threshold = SCORE_THRESHOLDS[m_difficulty_level];
+                    } else {
+                        m_next_difficulty_score_threshold = -1; // No further thresholds
+                    }
+                }
+
+
                 m_player_move_timer++;
-                if (m_player_move_timer >= PLAYER_MOVE_SPEED) {
+                if (m_player_move_timer >= m_current_player_move_speed) { // Use current speed
                     m_player_move_timer = 0;
                     m_player_x = (m_player_x + 1) % SCREEN_WIDTH;
                 }
 
                 m_playfield_shift_timer++;
-                if (m_playfield_shift_timer >= PLAYFIELD_SHIFT_SPEED) {
+                if (m_playfield_shift_timer >= m_current_playfield_shift_speed) { // Use current speed
                     m_playfield_shift_timer = 0;
                     for (int i = 0; i < SCREEN_WIDTH; i++) {
                         if (m_playfield[SCREEN_HEIGHT - 1][i] != 0) {
@@ -114,7 +138,7 @@ bool FillGame::update(GameState& state, bool button_pressed) {
                                 }
                             }
                             if (line_full) {
-                                state.score += 10;
+                                state.score += 1;
                                 m_line_clear_timer = 15;
                                 m_line_clear_y = final_y;
                                 for (int i = 0; i < SCREEN_WIDTH; i++) {
@@ -163,7 +187,10 @@ bool FillGame::update(GameState& state, bool button_pressed) {
 
 void FillGame::generate_new_top_row() {
     for (int i = 0; i < SCREEN_WIDTH; i++) {
-        m_playfield[0][i] = STATIC_BLOCK_COLOR;
+        m_playfield[0][i] = STATIC_BLOCK_COLOR; // Assume block by default
     }
-    m_playfield[0][rand() % SCREEN_WIDTH] = 0;
+    for (int k = 0; k < m_num_gaps_per_row; ++k) {
+        int gap_x = rand() % SCREEN_WIDTH;
+        m_playfield[0][gap_x] = 0; // Make 'm_num_gaps_per_row' gaps
+    }
 }
