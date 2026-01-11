@@ -7,10 +7,14 @@
 const int PLAYER_Y_POS = 14;
 const int LANE_POS[] = {4, 7, 10};
 const int NUM_LANES = sizeof(LANE_POS) / sizeof(LANE_POS[0]);
-const float WALL_SPEED = 0.2f;
-const int WALL_SPACING = 8;
 const int CHASE_PLAYER_COLOR = 2; // Green
 const int CHASE_WALL_COLOR = 4;   // Blue
+
+// --- Difficulty Constants ---
+const int MAX_DIFFICULTY_LEVELS = 4; // Levels 0, 1, 2, 3
+const float WALL_SPEED_LEVELS[] = {0.2f, 0.3f, 0.4f, 0.5f};
+const int WALL_SPACING_LEVELS[] = {8, 7, 6, 5};
+const int SCORE_THRESHOLDS_CHASE[] = {15, 40, 70}; // Score needed to reach Level 1, 2, 3
 
 
 // --- Constructor ---
@@ -22,8 +26,14 @@ ChaseGame::ChaseGame(GameState& state) {
     m_frame_counter = 0;
     m_player_lane_index = 1; // Start in the middle lane
 
+    // Initialize difficulty parameters
+    m_difficulty_level = 0;
+    m_current_wall_speed = WALL_SPEED_LEVELS[0];
+    m_current_wall_spacing = WALL_SPACING_LEVELS[0];
+    m_next_difficulty_score_threshold = SCORE_THRESHOLDS_CHASE[0];
+
     for (int i = 0; i < MAX_OBSTACLES; ++i) {
-        spawn_wall(m_walls[i], -i * WALL_SPACING);
+        spawn_wall(m_walls[i], -i * m_current_wall_spacing); // Use current spacing
     }
 }
 
@@ -44,6 +54,19 @@ bool ChaseGame::update(GameState& state, bool button_pressed) {
 
     switch (m_phase) {
         case CHASE_PHASE_PLAYING: {
+            // --- Difficulty Scaling ---
+            if (m_difficulty_level < MAX_DIFFICULTY_LEVELS - 1 && state.score >= m_next_difficulty_score_threshold) {
+                m_difficulty_level++;
+                m_current_wall_speed = WALL_SPEED_LEVELS[m_difficulty_level];
+                m_current_wall_spacing = WALL_SPACING_LEVELS[m_difficulty_level];
+                if (m_difficulty_level < MAX_DIFFICULTY_LEVELS - 1) { // Ensure we don't access out of bounds
+                    m_next_difficulty_score_threshold = SCORE_THRESHOLDS_CHASE[m_difficulty_level];
+                } else {
+                    m_next_difficulty_score_threshold = -1; // No further thresholds
+                }
+            }
+            // --- End Difficulty Scaling ---
+
             // --- Handle Input ---
             if (button_pressed && !state.was_button_pressed_last_frame) {
                 m_player_lane_index = (m_player_lane_index + 1) % NUM_LANES;
@@ -51,7 +74,7 @@ bool ChaseGame::update(GameState& state, bool button_pressed) {
 
             // --- Update Game State ---
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                m_walls[i].y_pos += WALL_SPEED; // Move wall down
+                m_walls[i].y_pos += m_current_wall_speed; // Use current speed
 
                 if (!m_walls[i].scored && m_walls[i].y_pos > PLAYER_Y_POS) {
                     state.score++;

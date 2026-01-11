@@ -32,6 +32,10 @@ private:
     int m_player_lane_index;
     ChaseObstacle m_walls[MAX_OBSTACLES]; // Use ChaseObstacle
     int m_frame_counter;
+    float m_current_wall_speed;
+    int m_current_wall_spacing;
+    int m_next_difficulty_score_threshold;
+    int m_difficulty_level;
 
     // Private helper methods
     void spawn_wall(ChaseObstacle& wall, float y_pos); // Update signature

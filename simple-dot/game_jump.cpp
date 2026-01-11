@@ -77,7 +77,7 @@ bool JumpGame::update(GameState& state, bool button_pressed) {
         case JUMP_PHASE_COUNTDOWN: {
             draw_player(state);
             
-            const int frames_per_number = 60;
+            const int frames_per_number = 40;
             int number = 3 - (m_frame_counter / frames_per_number);
             
             if (number > 0) {
