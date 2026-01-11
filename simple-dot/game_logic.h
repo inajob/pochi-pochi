@@ -3,24 +3,30 @@
 
 #include <stdint.h>
 
-// Forward declarations for game-specific state structs
-struct JumpGameState;
-struct ChaseGameState;
-struct FillGameState;
-
-
 #define SCREEN_WIDTH 16
 #define SCREEN_HEIGHT 16
 
 // --- Forward declaration for GameState ---
 struct GameState;
 
+// --- Abstract Base Class for Games ---
+class IGame {
+public:
+    virtual ~IGame() = default;
+
+    // Main update function for a game. Returns true if it wants to exit to title.
+    virtual bool update(GameState& state, bool button_pressed) = 0;
+
+    // Draws the game-specific title screen.
+    virtual void draw_title(GameState& state) = 0;
+};
+
+
 // --- Core Enums ---
 enum GamePhase {
     PHASE_TITLE,
-    PHASE_COUNTDOWN,
-    PHASE_PLAYING,
-    PHASE_GAME_OVER
+    // The individual game objects will now manage their own internal phases
+    // like countdown, playing, gameover.
 };
 
 enum GameSelection {
@@ -30,45 +36,23 @@ enum GameSelection {
 };
 const int NUM_GAMES = 3;
 
-// --- Game VTable (Function Pointer Table) ---
-struct GameVTable {
-    void (*init)(GameState&);
-    void (*update)(GameState&, bool);
-    void (*draw_title)(GameState&);
-};
-
-
-// --- Shared data structures ---
-#define MAX_OBSTACLES 2
-struct Obstacle {
-    float x;
-    int gap_y;
-    int gap_size;
-    bool scored;
-};
 
 // --- Main Game State ---
 struct GameState {
     // Screen buffer & core state
     uint8_t screen[SCREEN_HEIGHT][SCREEN_WIDTH];
     GamePhase phase;
-    GameSelection current_game;
+    GameSelection current_selection;
+    IGame* game_instance;
+
+    // Input and generic state
     int button_down_frames;
     bool was_button_pressed_last_frame;
     bool long_press_action_taken;
     bool ignore_input_until_release;
-
-    // Generic state
     int score;
     int frame_count;
     float text_scroll_offset;
-
-    // Union of pointers to game-specific states
-    union {
-        JumpGameState* jump;
-        ChaseGameState* chase;
-        FillGameState* fill;
-    } g; // g for game
 };
 
 #ifdef __cplusplus

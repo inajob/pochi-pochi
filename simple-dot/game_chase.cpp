@@ -1,8 +1,9 @@
 #include "game_chase.h"
 #include <string.h>
 #include <stdlib.h> // For rand()
+#include <stdio.h> // For sprintf
 
-// --- Chase Game Constants ---
+// --- Game Constants ---
 const int PLAYER_Y_POS = 14;
 const int LANE_POS[] = {4, 7, 10};
 const int NUM_LANES = sizeof(LANE_POS) / sizeof(LANE_POS[0]);
@@ -11,86 +12,76 @@ const int WALL_SPACING = 8;
 const int CHASE_PLAYER_COLOR = 2; // Green
 const int CHASE_WALL_COLOR = 4;   // Blue
 
-// --- Forward Declarations ---
-void spawn_wall(Obstacle& wall, float y_pos);
 
-// --- Game-specific Functions ---
-
-void draw_chase_title(GameState& state) {
-    const char* title_text = "CHASE";
-    int text_width = strlen(title_text) * 6;
-    
-    state.text_scroll_offset -= 0.5f;
-    if (state.text_scroll_offset < -text_width) {
-        state.text_scroll_offset = SCREEN_WIDTH;
-    }
-    
-    draw_text(state, title_text, (int)state.text_scroll_offset, 5, CHASE_PLAYER_COLOR);
-}
-
-void init_chase_game(GameState& state) {
-    state.phase = PHASE_PLAYING;
+// --- Constructor ---
+ChaseGame::ChaseGame(GameState& state) {
     state.score = 0;
-    state.frame_count = 0;
-    
-    state.g.chase = new ChaseGameState();
-    state.g.chase->player_lane_index = 1; // Start in the middle lane
+    state.frame_count = 0; // The main frame_count can be used if needed
+
+    m_phase = CHASE_PHASE_PLAYING;
+    m_frame_counter = 0;
+    m_player_lane_index = 1; // Start in the middle lane
 
     for (int i = 0; i < MAX_OBSTACLES; ++i) {
-        spawn_wall(state.g.chase->walls[i], -i * WALL_SPACING);
+        spawn_wall(m_walls[i], -i * WALL_SPACING);
     }
 }
 
-void spawn_wall(Obstacle& wall, float y_pos) {
-    wall.x = y_pos; // Using .x for the Y-position of the wall
-    wall.gap_y = rand() % NUM_LANES; // Using .gap_y for the gap's lane index
-    wall.scored = false;
+
+// --- Public Methods ---
+
+void ChaseGame::draw_title(GameState& state) {
+    const char* title_text = "CHASE";
+    state.text_scroll_offset -= 0.5f;
+    if (state.text_scroll_offset < -(float)strlen(title_text) * 6) { // Fix applied here
+        state.text_scroll_offset = SCREEN_WIDTH;
+    }
+    draw_text(state, title_text, (int)state.text_scroll_offset, 5, CHASE_PLAYER_COLOR); // Original color
 }
 
-void update_chase_game(GameState& state, bool button_pressed) {
-    switch (state.phase) {
-        case PHASE_PLAYING: {
+bool ChaseGame::update(GameState& state, bool button_pressed) {
+    m_frame_counter++;
+
+    switch (m_phase) {
+        case CHASE_PHASE_PLAYING: {
             // --- Handle Input ---
             if (button_pressed && !state.was_button_pressed_last_frame) {
-                state.g.chase->player_lane_index = (state.g.chase->player_lane_index + 1) % NUM_LANES;
+                m_player_lane_index = (m_player_lane_index + 1) % NUM_LANES;
             }
 
             // --- Update Game State ---
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                state.g.chase->walls[i].x += WALL_SPEED; // Move wall down
+                m_walls[i].x += WALL_SPEED; // Move wall down
 
-                // Check for scoring
-                if (!state.g.chase->walls[i].scored && state.g.chase->walls[i].x > PLAYER_Y_POS) {
+                if (!m_walls[i].scored && m_walls[i].x > PLAYER_Y_POS) {
                     state.score++;
-                    state.g.chase->walls[i].scored = true;
+                    m_walls[i].scored = true;
                 }
 
-                // Respawn wall if it's off-screen
-                if (state.g.chase->walls[i].x >= SCREEN_HEIGHT) {
-                    spawn_wall(state.g.chase->walls[i], 0);
+                if (m_walls[i].x >= SCREEN_HEIGHT) {
+                    spawn_wall(m_walls[i], 0);
                 }
             }
 
             // --- Collision Detection ---
-            int player_lane_x = LANE_POS[state.g.chase->player_lane_index];
+            int player_lane_x = LANE_POS[m_player_lane_index];
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                int wall_y = (int)state.g.chase->walls[i].x;
+                int wall_y = (int)m_walls[i].x;
                 if (wall_y == PLAYER_Y_POS) {
-                    int gap_lane = state.g.chase->walls[i].gap_y;
-                    if (state.g.chase->player_lane_index != gap_lane) {
-                        state.phase = PHASE_GAME_OVER;
-                        state.frame_count = 0; // For game over delay
+                    int gap_lane = m_walls[i].gap_y;
+                    if (m_player_lane_index != gap_lane) {
+                        m_phase = CHASE_PHASE_GAMEOVER;
+                        m_frame_counter = 0;
                         state.text_scroll_offset = SCREEN_WIDTH;
                     }
                 }
             }
 
             // --- Drawing ---
-            // Draw walls
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                int wall_y = (int)state.g.chase->walls[i].x;
+                int wall_y = (int)m_walls[i].x;
                 if (wall_y >= 0 && wall_y < SCREEN_HEIGHT) {
-                    int gap_lane_x = LANE_POS[state.g.chase->walls[i].gap_y];
+                    int gap_lane_x = LANE_POS[m_walls[i].gap_y];
                     for (int x = 0; x < SCREEN_WIDTH; ++x) {
                         if (x != gap_lane_x) {
                             state.screen[wall_y][x] = CHASE_WALL_COLOR;
@@ -98,36 +89,39 @@ void update_chase_game(GameState& state, bool button_pressed) {
                     }
                 }
             }
-            // Draw player
             state.screen[PLAYER_Y_POS][player_lane_x] = CHASE_PLAYER_COLOR;
             break;
         }
         
-        case PHASE_GAME_OVER: {
-            state.frame_count++;
+        case CHASE_PHASE_GAMEOVER: {
+            m_frame_counter++; // Re-add frame counter for game over delay
 
-            // Scrolling "GAME OVER" text
             const char* game_text = "GAME";
             const char* over_text = "OVER";
-            int text_width = strlen(game_text) * 6;
-
             state.text_scroll_offset -= 0.5f;
-            if (state.text_scroll_offset < -text_width) {
+            if (state.text_scroll_offset < -(float)strlen(over_text) * 6) { // Fix applied here
                 state.text_scroll_offset = SCREEN_WIDTH;
             }
 
             draw_text(state, game_text, (int)state.text_scroll_offset, 2, 1);
             draw_text(state, over_text, (int)state.text_scroll_offset, 8, 1);
-            draw_score(state, SCREEN_WIDTH / 2, 10, 7); // Corrected Y position
+            draw_score(state, SCREEN_WIDTH / 2, 10, 7);
 
-            if (button_pressed && !state.was_button_pressed_last_frame && state.frame_count > 30) {
-                delete state.g.chase;
-                state.g.chase = nullptr;
-                init_game(state); // Go back to main title screen
+            const int GAMEOVER_INPUT_DELAY_FRAMES = 30; // Defined locally, same as JumpGame
+            if (button_pressed && !state.was_button_pressed_last_frame && m_frame_counter > GAMEOVER_INPUT_DELAY_FRAMES) {
+                return true; // Signal to return to title
             }
             break;
         }
-        default:
-            break;
     }
+    return false; // By default, stay in game
+}
+
+
+// --- Private Methods ---
+
+void ChaseGame::spawn_wall(Obstacle& wall, float y_pos) {
+    wall.x = y_pos; // Using .x for the Y-position of the wall
+    wall.gap_y = rand() % NUM_LANES; // Using .gap_y for the gap's lane index
+    wall.scored = false;
 }

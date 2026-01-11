@@ -84,7 +84,8 @@ function gameLoop() {
     // The jump_button_pressed flag is now reset by keyup/mouseup events.
 
     // 2. Request next frame
-    requestAnimationFrame(gameLoop);
+    //requestAnimationFrame(gameLoop);
+    setTimeout(gameLoop, 25)
 }
 
 // --- Start the engine when WASM is ready ---
@@ -112,7 +113,6 @@ var Module = {
         }
 
         // Initialize game state in WASM (which will also do the initial render)
-        init_game_wasm(gameStatePtr);
         set_initial_game_wasm(gameStatePtr); // Set initial game to JUMP
 
         console.log("Game initialized. Starting loop.");
