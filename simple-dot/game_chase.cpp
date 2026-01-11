@@ -3,7 +3,7 @@
 #include <stdlib.h> // For rand()
 #include <stdio.h> // For sprintf
 
-// --- Game Constants ---
+// --- Chase Game Constants ---
 const int PLAYER_Y_POS = 14;
 const int LANE_POS[] = {4, 7, 10};
 const int NUM_LANES = sizeof(LANE_POS) / sizeof(LANE_POS[0]);
@@ -36,7 +36,7 @@ void ChaseGame::draw_title(GameState& state) {
     if (state.text_scroll_offset < -(float)strlen(title_text) * 6) { // Fix applied here
         state.text_scroll_offset = SCREEN_WIDTH;
     }
-    draw_text(state, title_text, (int)state.text_scroll_offset, 5, CHASE_PLAYER_COLOR); // Original color
+    draw_text(state, title_text, (int)state.text_scroll_offset, 5, CHASE_PLAYER_COLOR);
 }
 
 bool ChaseGame::update(GameState& state, bool button_pressed) {
@@ -51,14 +51,14 @@ bool ChaseGame::update(GameState& state, bool button_pressed) {
 
             // --- Update Game State ---
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                m_walls[i].x += WALL_SPEED; // Move wall down
+                m_walls[i].y_pos += WALL_SPEED; // Move wall down
 
-                if (!m_walls[i].scored && m_walls[i].x > PLAYER_Y_POS) {
+                if (!m_walls[i].scored && m_walls[i].y_pos > PLAYER_Y_POS) {
                     state.score++;
                     m_walls[i].scored = true;
                 }
 
-                if (m_walls[i].x >= SCREEN_HEIGHT) {
+                if (m_walls[i].y_pos >= SCREEN_HEIGHT) {
                     spawn_wall(m_walls[i], 0);
                 }
             }
@@ -66,9 +66,9 @@ bool ChaseGame::update(GameState& state, bool button_pressed) {
             // --- Collision Detection ---
             int player_lane_x = LANE_POS[m_player_lane_index];
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                int wall_y = (int)m_walls[i].x;
+                int wall_y = (int)m_walls[i].y_pos;
                 if (wall_y == PLAYER_Y_POS) {
-                    int gap_lane = m_walls[i].gap_y;
+                    int gap_lane = m_walls[i].gap_lane_index;
                     if (m_player_lane_index != gap_lane) {
                         m_phase = CHASE_PHASE_GAMEOVER;
                         m_frame_counter = 0;
@@ -79,9 +79,9 @@ bool ChaseGame::update(GameState& state, bool button_pressed) {
 
             // --- Drawing ---
             for (int i = 0; i < MAX_OBSTACLES; ++i) {
-                int wall_y = (int)m_walls[i].x;
+                int wall_y = (int)m_walls[i].y_pos;
                 if (wall_y >= 0 && wall_y < SCREEN_HEIGHT) {
-                    int gap_lane_x = LANE_POS[m_walls[i].gap_y];
+                    int gap_lane_x = LANE_POS[m_walls[i].gap_lane_index];
                     for (int x = 0; x < SCREEN_WIDTH; ++x) {
                         if (x != gap_lane_x) {
                             state.screen[wall_y][x] = CHASE_WALL_COLOR;
@@ -94,12 +94,12 @@ bool ChaseGame::update(GameState& state, bool button_pressed) {
         }
         
         case CHASE_PHASE_GAMEOVER: {
-            m_frame_counter++; // Re-add frame counter for game over delay
+            m_frame_counter++;
 
             const char* game_text = "GAME";
             const char* over_text = "OVER";
             state.text_scroll_offset -= 0.5f;
-            if (state.text_scroll_offset < -(float)strlen(over_text) * 6) { // Fix applied here
+            if (state.text_scroll_offset < -(float)strlen(game_text) * 6) { // Fix applied here
                 state.text_scroll_offset = SCREEN_WIDTH;
             }
 
@@ -107,7 +107,7 @@ bool ChaseGame::update(GameState& state, bool button_pressed) {
             draw_text(state, over_text, (int)state.text_scroll_offset, 8, 1);
             draw_score(state, SCREEN_WIDTH / 2, 10, 7);
 
-            const int GAMEOVER_INPUT_DELAY_FRAMES = 30; // Defined locally, same as JumpGame
+            const int GAMEOVER_INPUT_DELAY_FRAMES = 30;
             if (button_pressed && !state.was_button_pressed_last_frame && m_frame_counter > GAMEOVER_INPUT_DELAY_FRAMES) {
                 return true; // Signal to return to title
             }
@@ -120,8 +120,8 @@ bool ChaseGame::update(GameState& state, bool button_pressed) {
 
 // --- Private Methods ---
 
-void ChaseGame::spawn_wall(Obstacle& wall, float y_pos) {
-    wall.x = y_pos; // Using .x for the Y-position of the wall
-    wall.gap_y = rand() % NUM_LANES; // Using .gap_y for the gap's lane index
+void ChaseGame::spawn_wall(ChaseObstacle& wall, float y_pos) {
+    wall.y_pos = y_pos;
+    wall.gap_lane_index = rand() % NUM_LANES;
     wall.scored = false;
 }

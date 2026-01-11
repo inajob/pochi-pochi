@@ -15,9 +15,8 @@ enum JumpGamePhase {
 #define OBSTACLE_DEFINED
 #define MAX_OBSTACLES 2
 struct Obstacle {
-    float x;
-    int gap_y;
-    int gap_size;
+    float x;          // horizontal position
+    int height;       // height of the wall from the floor
     bool scored;
 };
 #endif
@@ -39,6 +38,12 @@ private:
     float m_player_velocity_y;
     Obstacle m_obstacles[MAX_OBSTACLES];
     int m_frame_counter; // Internal frame counter
+    float m_current_obstacle_speed;
+    int m_current_min_obstacle_spacing;
+    int m_current_max_obstacle_spacing;
+    int m_current_obstacle_height_max;
+    int m_next_difficulty_score_threshold;
+    int m_difficulty_level;
 
     // Private helper methods
     void draw_player(GameState& state);

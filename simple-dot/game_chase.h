@@ -10,19 +10,12 @@ enum ChaseGamePhase {
 };
 
 // --- Data Structures ---
-// Note: This is the same Obstacle struct from Jump, but used differently.
-// In a future refactor, this could be a more generic "GameObject".
-#ifndef OBSTACLE_DEFINED
-#define OBSTACLE_DEFINED
 #define MAX_OBSTACLES 2
-struct Obstacle {
-    float x;
-    int gap_y;
-    int gap_size;
+struct ChaseObstacle {
+    float y_pos;          // vertical position of the wall
+    int gap_lane_index;   // the lane where the gap is
     bool scored;
 };
-#endif
-
 
 // --- Chase Game Class ---
 class ChaseGame : public IGame {
@@ -37,11 +30,11 @@ private:
     // Game-specific state
     ChaseGamePhase m_phase;
     int m_player_lane_index;
-    Obstacle m_walls[MAX_OBSTACLES];
+    ChaseObstacle m_walls[MAX_OBSTACLES]; // Use ChaseObstacle
     int m_frame_counter;
 
     // Private helper methods
-    void spawn_wall(Obstacle& wall, float y_pos);
+    void spawn_wall(ChaseObstacle& wall, float y_pos); // Update signature
 };
 
 
