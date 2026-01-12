@@ -48,11 +48,13 @@ struct GameState {
     // Input and generic state
     int button_down_frames;
     bool was_button_pressed_last_frame;
-    bool long_press_action_taken;
+    bool game_switched_on_long_press;
+    bool brightness_adjusted_on_very_long_press;
     bool ignore_input_until_release;
     int score;
     int frame_count;
     float text_scroll_offset;
+    uint8_t current_brightness;
 };
 
 #ifdef __cplusplus

@@ -30,7 +30,7 @@ private:
     bool m_projectile_active;
     int m_projectile_x;
     int m_projectile_y;
-    uint8_t m_playfield[SCREEN_HEIGHT][SCREEN_WIDTH];
+    uint8_t m_playfield[SCREEN_HEIGHT][SCREEN_WIDTH / 8]; // Bit-packed: 1 bit per pixel
     int m_frame_counter;
     int m_current_playfield_shift_speed;
     int m_current_player_move_speed;
@@ -38,7 +38,10 @@ private:
     int m_next_difficulty_score_threshold;
     int m_difficulty_level;
 
-    // Private helper methods
+    // Private helper methods for bit-packed playfield access
+    bool get_pixel_status(int r, int c);
+    void set_pixel_status(int r, int c, bool status);
+
     void generate_new_top_row();
 };
 

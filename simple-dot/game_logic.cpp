@@ -19,7 +19,7 @@ IGame* create_game_instance(GameSelection selection, GameState& state) {
     switch(selection) {
         case GAME_JUMP: return new JumpGame(state);
         case GAME_CHASE: return new ChaseGame(state);
-        case GAME_FILL: return new FillGame(state);
+        case GAME_FILL: return new FillGame(state); // <--- Problem here?
     }
     return nullptr; // Should not happen
 }
@@ -83,9 +83,10 @@ void init_game(GameState& state) {
     state.phase = PHASE_TITLE;
     state.button_down_frames = 0;
     state.text_scroll_offset = SCREEN_WIDTH; // Explicitly reset scroll for title screen
-    state.was_button_pressed_last_frame = false;
-    state.long_press_action_taken = false;
+    state.game_switched_on_long_press = false;
+    state.brightness_adjusted_on_very_long_press = false;
     state.ignore_input_until_release = true;
+    state.current_brightness = 16; // Default brightness
 
     // --- FIX: Re-create the game instance ---
     if (state.game_instance) { // Only delete if one exists
@@ -98,6 +99,16 @@ void init_game(GameState& state) {
 void set_initial_game(GameState& state) {
     state.current_selection = GAME_JUMP;
     state.game_instance = create_game_instance(state.current_selection, state);
+    if (!state.game_instance) {
+        // Fallback if allocation fails (e.g., out of memory on Arduino)
+        state.current_selection = GAME_JUMP; // Ensure selection is fallback game
+        state.game_instance = new JumpGame(state); // Try allocating JumpGame as fallback
+        if (!state.game_instance) {
+             // If even JumpGame fails, something is seriously wrong, possibly a global crash or a very small heap.
+             // For now, let's just assert or loop. On Arduino, a reset might be better.
+             while(true); // Hard lock if critical failure
+        }
+    }
     init_game(state); // Set initial phase to title
 }
 
@@ -105,42 +116,57 @@ void set_initial_game(GameState& state) {
 void update_game(GameState& state, bool button_pressed) {
     clear_screen(state);
 
-    if (state.phase == PHASE_TITLE) {
-        const int LONG_PRESS_FRAMES = 20;
+    const int LONG_PRESS_FRAMES = 20;
 
-        if (state.ignore_input_until_release) {
-            if (!button_pressed) {
-                state.ignore_input_until_release = false;
-            }
+    if (state.ignore_input_until_release) {
+        if (!button_pressed) {
+            state.ignore_input_until_release = false;
+            // When ignore_input_until_release is cleared, reset all button-related flags
             state.button_down_frames = 0;
-            state.long_press_action_taken = false;
-        } else {
-            if (button_pressed) {
-                state.button_down_frames++;
-                if (state.button_down_frames >= LONG_PRESS_FRAMES && !state.long_press_action_taken) {
-                    // Long press: switch game
-                    state.current_selection = (GameSelection)((state.current_selection + 1) % NUM_GAMES);
-                    delete state.game_instance;
-                    state.game_instance = create_game_instance(state.current_selection, state);
-                    state.long_press_action_taken = true;
+            state.game_switched_on_long_press = false;
+            state.brightness_adjusted_on_very_long_press = false;
+        }
+        return; // Block all further input processing this frame
+    }
+
+    // --- Normal input processing ---
+    if (button_pressed) {
+        state.button_down_frames++;
+
+        // Only check for long press if brightness action was NOT taken
+        if (state.button_down_frames >= LONG_PRESS_FRAMES && !state.game_switched_on_long_press) {
+            // Long press: switch game on title
+            if (state.phase == PHASE_TITLE) {
+                state.current_selection = (GameSelection)((state.current_selection + 1) % NUM_GAMES);
+                delete state.game_instance;
+                state.game_instance = create_game_instance(state.current_selection, state);
+                if (!state.game_instance) {
+                    state.current_selection = GAME_JUMP; // Fallback to JumpGame
+                    state.game_instance = new JumpGame(state);
+                    if (!state.game_instance) { while(true); } // Critical failure
                 }
-            } else { // Button was released
-                if (state.button_down_frames > 0 && !state.long_press_action_taken) {
-                    // Short press: start game
-                    // The game object will transition its own internal state
-                    // The main `phase` is no longer needed to track countdown/playing/gameover
-                    state.phase = (GamePhase)1; // Any phase other than TITLE
-                }
-                state.button_down_frames = 0;
-                state.long_press_action_taken = false;
+            }
+            state.game_switched_on_long_press = true; // Mark action as taken for this hold
+        }
+    } else { // Button was released
+        // Short press logic - only if no long press action was taken during this hold
+        if (state.button_down_frames > 0 && !state.game_switched_on_long_press) {
+            if (state.phase == PHASE_TITLE) {
+                // Short press: start game
+                state.phase = (GamePhase)1; // Any phase other than TITLE
             }
         }
+        // Reset all button related state on release
+        state.button_down_frames = 0;
+        state.game_switched_on_long_press = false;
+        state.brightness_adjusted_on_very_long_press = false;
+    }
 
-        // Draw the title for the currently selected game
+    // --- Drawing for Title phase ---
+    if (state.phase == PHASE_TITLE) {
         if (state.game_instance) {
             state.game_instance->draw_title(state);
         }
-
     } else { // Game is in progress
         if (state.game_instance) {
             bool wants_to_return_to_title = state.game_instance->update(state, button_pressed);

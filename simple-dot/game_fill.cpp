@@ -15,22 +15,22 @@ const int NUM_GAPS_PER_ROW_LEVELS[] = {1, 2, 3, 4}; // More gaps = harder (user'
 const int SCORE_THRESHOLDS[] = {5, 15, 30}; // Score needed to reach Level 1, 2, 3
 
 
+// --- Helper Functions for Bit Packing ---
+
+// Calculate the byte index for a given column
+#define GET_BYTE_INDEX(c) ((c) / 8)
+// Calculate the bit position within that byte
+#define GET_BIT_POS(c)    ((c) % 8)
+
 // --- Constructor ---
 FillGame::FillGame(GameState& state) {
     state.score = 0;
     state.frame_count = 0;
     
-    m_phase = FILL_PHASE_COUNTDOWN;
+    m_phase = FILL_PHASE_PLAYING;
     m_frame_counter = 0;
 
-    memset(m_playfield, 0, sizeof(m_playfield));
-
-    m_player_x = SCREEN_WIDTH / 2;
-    m_player_move_timer = 0;
-    m_playfield_shift_timer = PLAYFIELD_SHIFT_SPEED_LEVELS[0]; // Initialize with level 0 speed
-    m_line_clear_timer = 0;
-    m_line_clear_y = -1;
-    m_projectile_active = false;
+    memset(m_playfield, 0, sizeof(m_playfield)); // Initialize all bits to 0 (false)
 
     // Initialize difficulty parameters
     m_difficulty_level = 0;
@@ -38,6 +38,25 @@ FillGame::FillGame(GameState& state) {
     m_current_player_move_speed = PLAYER_MOVE_SPEED_LEVELS[0];
     m_num_gaps_per_row = NUM_GAPS_PER_ROW_LEVELS[0];
     m_next_difficulty_score_threshold = SCORE_THRESHOLDS[0];
+
+    // Generate initial 5 rows
+    for (int r = 0; r < 5; ++r) {
+        // Shift existing blocks down to make space for the new top row
+        for (int row_idx = SCREEN_HEIGHT - 2; row_idx >= 0; --row_idx) {
+            // Shift bit-packed rows
+            for(int byte_idx = 0; byte_idx < (SCREEN_WIDTH / 8); ++byte_idx) {
+                m_playfield[row_idx + 1][byte_idx] = m_playfield[row_idx][byte_idx];
+            }
+        }
+        generate_new_top_row(); // Generates a new row at the very top (row 0)
+    }
+
+    m_player_x = SCREEN_WIDTH / 2;
+    m_player_move_timer = 0;
+    m_playfield_shift_timer = PLAYFIELD_SHIFT_SPEED_LEVELS[0]; // Initialize with level 0 speed
+    m_line_clear_timer = 0;
+    m_line_clear_y = -1;
+    m_projectile_active = false;
 }
 
 // --- Public Methods ---
@@ -45,7 +64,7 @@ FillGame::FillGame(GameState& state) {
 void FillGame::draw_title(GameState& state) {
     const char* title_text = "FILL";
     state.text_scroll_offset -= 0.5f;
-    if (state.text_scroll_offset < -(float)strlen(title_text) * 6) { // Fix applied here
+    if (state.text_scroll_offset < -(float)strlen(title_text) * 6) {
         state.text_scroll_offset = SCREEN_WIDTH;
     }
     draw_text(state, title_text, (int)state.text_scroll_offset, 5, 4); // Original color
@@ -55,7 +74,7 @@ bool FillGame::update(GameState& state, bool button_pressed) {
     m_frame_counter++;
 
     switch (m_phase) {
-        case FILL_PHASE_COUNTDOWN: {
+        case FILL_PHASE_COUNTDOWN: { // Should be unreachable with current constructor logic
             const int frames_per_number = 60;
             int number = 3 - (m_frame_counter / frames_per_number);
             if (number > 0) {
@@ -72,9 +91,15 @@ bool FillGame::update(GameState& state, bool button_pressed) {
             if (m_line_clear_timer > 0) {
                 m_line_clear_timer--;
                 if (m_line_clear_timer == 0) {
-                    memset(m_playfield[m_line_clear_y], 0, sizeof(uint8_t) * SCREEN_WIDTH);
+                    // Clear the cleared line itself
+                    for(int c = 0; c < SCREEN_WIDTH; ++c) {
+                        set_pixel_status(m_line_clear_y, c, false);
+                    }
+                    // Clear all rows below the cleared line as a bonus
                     for (int r = m_line_clear_y + 1; r < SCREEN_HEIGHT; r++) {
-                        memset(m_playfield[r], 0, sizeof(uint8_t) * SCREEN_WIDTH);
+                        for(int c = 0; c < SCREEN_WIDTH; ++c) {
+                            set_pixel_status(r, c, false);
+                        }
                     }
                     m_line_clear_y = -1;
                 }
@@ -105,7 +130,7 @@ bool FillGame::update(GameState& state, bool button_pressed) {
                 if (m_playfield_shift_timer >= m_current_playfield_shift_speed) { // Use current speed
                     m_playfield_shift_timer = 0;
                     for (int i = 0; i < SCREEN_WIDTH; i++) {
-                        if (m_playfield[SCREEN_HEIGHT - 1][i] != 0) {
+                        if (get_pixel_status(SCREEN_HEIGHT - 1, i)) { // Use helper
                             m_phase = FILL_PHASE_GAMEOVER;
                             m_frame_counter = 0;
                             break;
@@ -113,8 +138,11 @@ bool FillGame::update(GameState& state, bool button_pressed) {
                     }
                     if (m_phase == FILL_PHASE_GAMEOVER) break;
 
+                    // Shift bit-packed rows down
                     for (int r = SCREEN_HEIGHT - 2; r >= 0; r--) {
-                        memcpy(m_playfield[r + 1], m_playfield[r], SCREEN_WIDTH * sizeof(uint8_t));
+                        for(int byte_idx = 0; byte_idx < (SCREEN_WIDTH / 8); ++byte_idx) {
+                            m_playfield[r + 1][byte_idx] = m_playfield[r][byte_idx];
+                        }
                     }
                     generate_new_top_row();
                 }
@@ -126,13 +154,13 @@ bool FillGame::update(GameState& state, bool button_pressed) {
                 }
 
                 if (m_projectile_active) {
-                    if (m_projectile_y < 0 || m_playfield[m_projectile_y][m_projectile_x] != 0) {
+                    if (m_projectile_y < 0 || get_pixel_status(m_projectile_y, m_projectile_x)) { // Use helper
                         int final_y = m_projectile_y + 1;
                         if (final_y < SCREEN_HEIGHT) {
-                            m_playfield[final_y][m_projectile_x] = STATIC_BLOCK_COLOR;
+                            set_pixel_status(final_y, m_projectile_x, true); // Use helper
                             bool line_full = true;
                             for(int i = 0; i < SCREEN_WIDTH; i++) {
-                                if (m_playfield[final_y][i] == 0) {
+                                if (!get_pixel_status(final_y, i)) { // Use helper
                                     line_full = false;
                                     break;
                                 }
@@ -141,9 +169,7 @@ bool FillGame::update(GameState& state, bool button_pressed) {
                                 state.score += 1;
                                 m_line_clear_timer = 15;
                                 m_line_clear_y = final_y;
-                                for (int i = 0; i < SCREEN_WIDTH; i++) {
-                                    m_playfield[final_y][i] = LINE_CLEAR_EFFECT_COLOR;
-                                }
+                                // Draw line clear effect directly, m_playfield doesn't store color
                             }
                         }
                         m_projectile_active = false;
@@ -153,7 +179,21 @@ bool FillGame::update(GameState& state, bool button_pressed) {
                 }
             }
             // --- Drawing ---
-            memcpy(state.screen, m_playfield, sizeof(state.screen));
+            for (int r = 0; r < SCREEN_HEIGHT; ++r) {
+                for (int c = 0; c < SCREEN_WIDTH; ++c) {
+                    uint8_t pixel_color = 0;
+                    if (get_pixel_status(r, c)) { // If there's a block
+                        pixel_color = STATIC_BLOCK_COLOR;
+                    }
+
+                    // Check for line clear effect
+                    if (m_line_clear_timer > 0 && r == m_line_clear_y) {
+                        pixel_color = LINE_CLEAR_EFFECT_COLOR;
+                    }
+                    state.screen[r][c] = pixel_color;
+                }
+            }
+
             if (m_projectile_active) {
                 state.screen[m_projectile_y][m_projectile_x] = PROJECTILE_COLOR;
             }
@@ -185,12 +225,32 @@ bool FillGame::update(GameState& state, bool button_pressed) {
 
 // --- Private Methods ---
 
+// Helper to get pixel status (block/no block)
+bool FillGame::get_pixel_status(int r, int c) {
+    if (r < 0 || r >= SCREEN_HEIGHT || c < 0 || c >= SCREEN_WIDTH) return false;
+    int byte_idx = GET_BYTE_INDEX(c);
+    int bit_pos = GET_BIT_POS(c);
+    return (m_playfield[r][byte_idx] >> bit_pos) & 1;
+}
+
+// Helper to set pixel status (block/no block)
+void FillGame::set_pixel_status(int r, int c, bool status) {
+    if (r < 0 || r >= SCREEN_HEIGHT || c < 0 || c >= SCREEN_WIDTH) return;
+    int byte_idx = GET_BYTE_INDEX(c);
+    int bit_pos = GET_BIT_POS(c);
+    if (status) {
+        m_playfield[r][byte_idx] |= (1 << bit_pos); // Set bit
+    } else {
+        m_playfield[r][byte_idx] &= ~(1 << bit_pos); // Clear bit
+    }
+}
+
 void FillGame::generate_new_top_row() {
     for (int i = 0; i < SCREEN_WIDTH; i++) {
-        m_playfield[0][i] = STATIC_BLOCK_COLOR; // Assume block by default
+        set_pixel_status(0, i, true); // Assume block by default
     }
     for (int k = 0; k < m_num_gaps_per_row; ++k) {
         int gap_x = rand() % SCREEN_WIDTH;
-        m_playfield[0][gap_x] = 0; // Make 'm_num_gaps_per_row' gaps
+        set_pixel_status(0, gap_x, false); // Make 'm_num_gaps_per_row' gaps
     }
 }
