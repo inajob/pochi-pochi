@@ -32,9 +32,10 @@ enum GamePhase {
 enum GameSelection {
     GAME_JUMP,
     GAME_CHASE,
-    GAME_FILL
+    GAME_FILL,
+    GAME_BRIGHTNESS_ADJUSTMENT // New game for brightness control
 };
-const int NUM_GAMES = 3;
+const int NUM_GAMES = 4;
 
 
 // --- Main Game State ---
@@ -53,6 +54,7 @@ struct GameState {
     int score;
     int frame_count;
     float text_scroll_offset;
+    uint8_t current_brightness;
 };
 
 #ifdef __cplusplus

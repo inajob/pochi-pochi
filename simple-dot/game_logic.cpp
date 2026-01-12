@@ -8,6 +8,7 @@
 #include "game_jump.h"
 #include "game_chase.h"
 #include "game_fill.h"
+#include "game_brightness.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -20,6 +21,7 @@ IGame* create_game_instance(GameSelection selection, GameState& state) {
         case GAME_JUMP: return new JumpGame(state);
         case GAME_CHASE: return new ChaseGame(state);
         case GAME_FILL: return new FillGame(state);
+        case GAME_BRIGHTNESS_ADJUSTMENT: return new BrightnessGame(state);
     }
     return nullptr; // Should not happen
 }
@@ -95,6 +97,7 @@ void init_game(GameState& state) {
 // Sets up the very first game instance on startup
 void set_initial_game(GameState& state) {
     state.current_selection = GAME_JUMP;
+    state.current_brightness = 16; // Initialize brightness once at startup
     state.game_instance = create_game_instance(state.current_selection, state);
     if (!state.game_instance) {
         // Fallback if allocation fails (e.g., out of memory on Arduino)
