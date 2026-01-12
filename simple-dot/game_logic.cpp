@@ -19,7 +19,7 @@ IGame* create_game_instance(GameSelection selection, GameState& state) {
     switch(selection) {
         case GAME_JUMP: return new JumpGame(state);
         case GAME_CHASE: return new ChaseGame(state);
-        case GAME_FILL: return new FillGame(state); // <--- Problem here?
+        case GAME_FILL: return new FillGame(state);
     }
     return nullptr; // Should not happen
 }
@@ -43,7 +43,6 @@ void render_screen(GameState& state) {
 
 // --- Game Constants ---
 const int BACKGROUND_COLOR = 0;
-
 
 // --- Core Drawing & Text Functions ---
 void clear_screen(GameState& state) { memset(state.screen, BACKGROUND_COLOR, sizeof(state.screen)); }
@@ -84,9 +83,7 @@ void init_game(GameState& state) {
     state.button_down_frames = 0;
     state.text_scroll_offset = SCREEN_WIDTH; // Explicitly reset scroll for title screen
     state.game_switched_on_long_press = false;
-    state.brightness_adjusted_on_very_long_press = false;
     state.ignore_input_until_release = true;
-    state.current_brightness = 16; // Default brightness
 
     // --- FIX: Re-create the game instance ---
     if (state.game_instance) { // Only delete if one exists
@@ -119,21 +116,21 @@ void update_game(GameState& state, bool button_pressed) {
     const int LONG_PRESS_FRAMES = 20;
 
     if (state.ignore_input_until_release) {
+        // Block all input processing until button is released
         if (!button_pressed) {
             state.ignore_input_until_release = false;
-            // When ignore_input_until_release is cleared, reset all button-related flags
+            // Once button is released, reset all button-related flags
             state.button_down_frames = 0;
             state.game_switched_on_long_press = false;
-            state.brightness_adjusted_on_very_long_press = false;
         }
-        return; // Block all further input processing this frame
+        return; // Exit update_game early if ignoring input
     }
 
     // --- Normal input processing ---
     if (button_pressed) {
         state.button_down_frames++;
 
-        // Only check for long press if brightness action was NOT taken
+        // Check for LONG_PRESS (only if not already switched)
         if (state.button_down_frames >= LONG_PRESS_FRAMES && !state.game_switched_on_long_press) {
             // Long press: switch game on title
             if (state.phase == PHASE_TITLE) {
@@ -159,7 +156,6 @@ void update_game(GameState& state, bool button_pressed) {
         // Reset all button related state on release
         state.button_down_frames = 0;
         state.game_switched_on_long_press = false;
-        state.brightness_adjusted_on_very_long_press = false;
     }
 
     // --- Drawing for Title phase ---

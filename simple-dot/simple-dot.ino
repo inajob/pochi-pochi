@@ -36,6 +36,7 @@ uint16_t getColorFromIndex(uint8_t index) {
 // --- Arduino Setup ---
 void setup() {
   matrix.begin();
+  matrix.setBrightness(16); // Restore fixed brightness
 
   // Set up the jump button with an internal pull-up resistor
   pinMode(JUMP_BUTTON_PIN, INPUT_PULLUP);
@@ -65,7 +66,6 @@ void loop() {
       matrix.drawPixel(c, r, color);
     }
   }
-  matrix.setBrightness(gameState.current_brightness); // Apply brightness from game state
   matrix.show(); // Update the display with the new data
 
   // 4. Delay to control frame rate
