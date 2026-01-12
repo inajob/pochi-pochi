@@ -53,7 +53,6 @@ struct GameState {
     int score;
     int frame_count;
     float text_scroll_offset;
-    uint8_t current_brightness;
 };
 
 #ifdef __cplusplus
