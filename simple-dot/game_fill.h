@@ -10,6 +10,14 @@ enum FillGamePhase {
     FILL_PHASE_GAMEOVER
 };
 
+#define MAX_PROJECTILES 5
+
+struct Projectile {
+    bool active;
+    int x;
+    int y;
+};
+
 // --- Fill Game Class ---
 class FillGame : public IGame {
 public:
@@ -27,9 +35,7 @@ private:
     int m_playfield_shift_timer;
     int m_line_clear_timer;
     int m_line_clear_y;
-    bool m_projectile_active;
-    int m_projectile_x;
-    int m_projectile_y;
+    Projectile m_projectiles[MAX_PROJECTILES];
     uint8_t m_playfield[SCREEN_HEIGHT][SCREEN_WIDTH / 8]; // Bit-packed: 1 bit per pixel
     int m_frame_counter;
     int m_current_playfield_shift_speed;

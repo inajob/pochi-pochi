@@ -56,7 +56,9 @@ FillGame::FillGame(GameState& state) {
     m_playfield_shift_timer = PLAYFIELD_SHIFT_SPEED_LEVELS[0]; // Initialize with level 0 speed
     m_line_clear_timer = 0;
     m_line_clear_y = -1;
-    m_projectile_active = false;
+    for (int i = 0; i < MAX_PROJECTILES; ++i) {
+        m_projectiles[i].active = false;
+    }
 }
 
 // --- Public Methods ---
@@ -126,6 +128,47 @@ bool FillGame::update(GameState& state, bool button_pressed) {
                     m_player_x = (m_player_x + 1) % SCREEN_WIDTH;
                 }
 
+                // --- Fire Projectile ---
+                if (button_pressed && !state.was_button_pressed_last_frame) {
+                    for (int i = 0; i < MAX_PROJECTILES; ++i) {
+                        if (!m_projectiles[i].active) {
+                            m_projectiles[i].active = true;
+                            m_projectiles[i].x = m_player_x;
+                            m_projectiles[i].y = SCREEN_HEIGHT - 2;
+                            break; // Exit after firing one projectile per button press
+                        }
+                    }
+                }
+
+                // --- Update Projectiles ---
+                for (int i = 0; i < MAX_PROJECTILES; ++i) {
+                    if (m_projectiles[i].active) {
+                        if (m_projectiles[i].y < 0 || get_pixel_status(m_projectiles[i].y, m_projectiles[i].x)) { // Use helper
+                            int final_y = m_projectiles[i].y + 1;
+                            if (final_y < SCREEN_HEIGHT) {
+                                set_pixel_status(final_y, m_projectiles[i].x, true); // Use helper
+                                bool line_full = true;
+                                for(int c = 0; c < SCREEN_WIDTH; c++) {
+                                    if (!get_pixel_status(final_y, c)) { // Use helper
+                                        line_full = false;
+                                        break;
+                                    }
+                                }
+                                if (line_full) {
+                                    state.score += 1;
+                                    m_line_clear_timer = 15;
+                                    m_line_clear_y = final_y;
+                                    // Draw line clear effect directly, m_playfield doesn't store color
+                                }
+                            }
+                            m_projectiles[i].active = false;
+                        } else {
+                             m_projectiles[i].y--;
+                        }
+                    }
+                }
+                
+                // --- Shift Playfield ---
                 m_playfield_shift_timer++;
                 if (m_playfield_shift_timer >= m_current_playfield_shift_speed) { // Use current speed
                     m_playfield_shift_timer = 0;
@@ -146,37 +189,6 @@ bool FillGame::update(GameState& state, bool button_pressed) {
                     }
                     generate_new_top_row();
                 }
-
-                if (button_pressed && !state.was_button_pressed_last_frame && !m_projectile_active) {
-                    m_projectile_active = true;
-                    m_projectile_x = m_player_x;
-                    m_projectile_y = SCREEN_HEIGHT - 2;
-                }
-
-                if (m_projectile_active) {
-                    if (m_projectile_y < 0 || get_pixel_status(m_projectile_y, m_projectile_x)) { // Use helper
-                        int final_y = m_projectile_y + 1;
-                        if (final_y < SCREEN_HEIGHT) {
-                            set_pixel_status(final_y, m_projectile_x, true); // Use helper
-                            bool line_full = true;
-                            for(int i = 0; i < SCREEN_WIDTH; i++) {
-                                if (!get_pixel_status(final_y, i)) { // Use helper
-                                    line_full = false;
-                                    break;
-                                }
-                            }
-                            if (line_full) {
-                                state.score += 1;
-                                m_line_clear_timer = 15;
-                                m_line_clear_y = final_y;
-                                // Draw line clear effect directly, m_playfield doesn't store color
-                            }
-                        }
-                        m_projectile_active = false;
-                    } else {
-                         m_projectile_y--;
-                    }
-                }
             }
             // --- Drawing ---
             for (int r = 0; r < SCREEN_HEIGHT; ++r) {
@@ -194,8 +206,11 @@ bool FillGame::update(GameState& state, bool button_pressed) {
                 }
             }
 
-            if (m_projectile_active) {
-                state.screen[m_projectile_y][m_projectile_x] = PROJECTILE_COLOR;
+            // Draw projectiles
+            for (int i = 0; i < MAX_PROJECTILES; ++i) {
+                if (m_projectiles[i].active) {
+                    state.screen[m_projectiles[i].y][m_projectiles[i].x] = PROJECTILE_COLOR;
+                }
             }
             state.screen[SCREEN_HEIGHT - 1][m_player_x] = PLAYER_COLOR_FILL;
             break;
