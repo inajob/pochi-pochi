@@ -1,7 +1,7 @@
 // --- DOM Elements ---
 const gridContainer = document.getElementById('grid-container');
 const jumpButton = document.getElementById('jump-button');
-const scoreDisplay = document.getElementById('score-display'); // ★ 追加
+
 
 // --- Game Constants ---
 const SCREEN_WIDTH = 16;
@@ -30,12 +30,7 @@ window.setPixelInGrid = function(x, y, color) {
     }
 };
 
-// --- Score Display (called from C++ via EM_JS) ---
-window.updateScoreDisplay = function(score) {
-    if (scoreDisplay) {
-        scoreDisplay.textContent = `Score: ${score}`;
-    }
-};
+
 
 // --- Initialization ---
 function init() {
@@ -51,16 +46,33 @@ function init() {
         pixels.push(pixel);
     }
 
-    // Add event listeners
-    jumpButton.addEventListener('mousedown', () => {
+    // --- Event Listeners ---
+    const press = (e) => {
+        e.preventDefault();
         jump_button_pressed = true;
-    });
-    jumpButton.addEventListener('mouseup', () => {
+    };
+    const release = (e) => {
+        e.preventDefault();
         jump_button_pressed = false;
-    });
-    jumpButton.addEventListener('mouseleave', () => { // In case the user drags the mouse away
-        jump_button_pressed = false;
-    });
+    };
+
+    // Mouse events
+    jumpButton.addEventListener('mousedown', press);
+    gridContainer.addEventListener('mousedown', press);
+    jumpButton.addEventListener('mouseup', release);
+    gridContainer.addEventListener('mouseup', release);
+    jumpButton.addEventListener('mouseleave', release);
+    gridContainer.addEventListener('mouseleave', release);
+
+    // Touch events
+    jumpButton.addEventListener('touchstart', press);
+    gridContainer.addEventListener('touchstart', press);
+    jumpButton.addEventListener('touchend', release);
+    gridContainer.addEventListener('touchend', release);
+    jumpButton.addEventListener('touchcancel', release);
+    gridContainer.addEventListener('touchcancel', release);
+
+    // Keyboard events
     document.addEventListener('keydown', (e) => {
         if (e.code === 'Space') {
             e.preventDefault(); // Prevent page scroll
