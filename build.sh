@@ -1,0 +1,1 @@
+../emsdk/upstream/emscripten/emcc src/game_logic.cpp src/game_jump.cpp src/game_chase.cpp src/game_fill.cpp src/game_brightness.cpp -o public/game.js -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=1 -s EXPORTED_FUNCTIONS=_init_game,_update_game,_set_initial_game,_malloc,_free -s EXPORTED_RUNTIME_METHODS=ccall,cwrap -O2
