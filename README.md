@@ -48,6 +48,7 @@ Web版は、C++のコードをWebAssemblyにコンパイルして実行します
 2.  **配線**:
     - NeoPixel Matrix のデータ入力ピンを Arduino の **ピン6** に接続します。
     - プッシュボタンを Arduino の **ピン2** と **GND** に接続します。（スケッチは内部プルアップ抵抗を使用します）
+    ![](imgs/display.png)
 
 3.  **セットアップ**:
     - [Arduino IDE](https://www.arduino.cc/en/software) をインストールします。
