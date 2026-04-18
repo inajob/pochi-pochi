@@ -9,6 +9,7 @@
 #include "game_chase.h"
 #include "game_fill.h"
 #include "game_brightness.h"
+#include "game_ufo.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -22,6 +23,7 @@ IGame* create_game_instance(GameSelection selection, GameState& state) {
         case GAME_CHASE: return new ChaseGame(state);
         case GAME_FILL: return new FillGame(state);
         case GAME_BRIGHTNESS_ADJUSTMENT: return new BrightnessGame(state);
+        case GAME_UFO: return new UfoGame(state);
     }
     return nullptr; // Should not happen
 }

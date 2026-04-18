@@ -33,9 +33,10 @@ enum GameSelection {
     GAME_JUMP,
     GAME_CHASE,
     GAME_FILL,
-    GAME_BRIGHTNESS_ADJUSTMENT // New game for brightness control
+    GAME_UFO,
+    GAME_BRIGHTNESS_ADJUSTMENT
 };
-const int NUM_GAMES = 4;
+const int NUM_GAMES = 5;
 
 
 // --- Main Game State ---
